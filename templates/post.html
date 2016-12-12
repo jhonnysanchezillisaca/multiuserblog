@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="post">
+    {% if isUserPost %}
+        <a href="/editpost/{{blog_id}}"><button name="edit-btn">Edit post</button></a>
+        <a href="/deletepost/{{blog_id}}"><button name="delete-btn">Delete post</button></a>
+    {% endif %}
+    {% for post in posts %}
+    <h2>{{post.subject}}</h2>
+    <p>
+      {{post.content}}
+    </p>
+    <p style="color: grey;">
+      {{post.creator}}
+    </p>
+    {% endfor %}
+
+    <h4>Comments:</h4>
+    {% for comment in comments %}
+        {% if comment.creator == username %}
+            <a href=""><button type="button" name="edit-comment-btn">Edit comment</button></a>
+        {% endif %}
+    <p>{{comment.content}}</p>
+
+    <p style="color: grey;">
+      {{comment.creator}}
+    </p>
+    {% endfor %}
+
+
+</div>
+<form method="post">
+    <div class="comment_error" style="color: red">
+        {{comment_error}}
+    </div>
+    <div class="likes">
+
+    </div>
+    <div class="comments">
+            <input type="text" name="comment-content" placeholder="Add a new comment">
+            <button type="submit" name="commment-btn">Comment</button>
+    </div>
+</form>
+
+
+{% endblock %}
