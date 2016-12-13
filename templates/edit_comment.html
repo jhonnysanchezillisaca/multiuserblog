@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="post">
+    <h2>{{post.subject}}</h2>
+    <p>
+      {{post.content}}
+    </p>
+    <p style="color: grey;">
+      {{post.creator}}
+    </p>
+</div>
+
+<form method="post">
+    <div class="comment_error" style="color: red">
+        {{comment_error}}
+    </div>
+    <div class="comments">
+            <input type="text" name="comment-content" value={{comment.content}}>
+            <button type="submit" name="commment-btn">Save</button>
+            <a href="/post/{{post.key().id()}}"><button>Cancel</button></a>
+    </div>
+</form>
+
+
+{% endblock %}

@@ -50,7 +50,7 @@ class User(db.Model):
 
 
 class Comment(db.Model):
-    content = db.StringProperty(required=True)
+    content = db.TextProperty(required=True)
     creator = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
     post = db.StringProperty(required=True)
@@ -171,7 +171,6 @@ class EditCommentPage(Handler):
         post = BlogPost.get_by_id(int(comment.post))
 
         if(active_user and comment.creator == active_user):
-            pass
             # TODO: get the content of the comment and modify it in the database
             new_content = self.request.get("comment-content")
             if new_content:
