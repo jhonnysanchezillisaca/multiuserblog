@@ -152,6 +152,40 @@ class EditPostPage(Handler):
         self.redirect("/login")
 
 
+class EditCommentPage(Handler):
+    def get(self, comment_id):
+        active_user = self.activeUser()
+        comment = Comment.get_by_id(int(comment_id))
+        post = BlogPost.get_by_id(int(comment.post))
+        if(active_user and comment.creator == active_user):
+            # TODO: render the post and the comment form to edit
+            # BUG: the html don't display the full comment
+            self.render("edit_comment.html", comment=comment,
+                        post=post, comment_id=comment_id)
+        else:
+            self.redirect("/login")
+
+    def post(self, comment_id):
+        active_user = self.activeUser()
+        comment = Comment.get_by_id(int(comment_id))
+        post = BlogPost.get_by_id(int(comment.post))
+
+        if(active_user and comment.creator == active_user):
+            pass
+            # TODO: get the content of the comment and modify it in the database
+            new_content = self.request.get("comment-content")
+            if new_content:
+                comment.content = new_content
+                comment.put()
+            # subject = self.request.get("subject")
+            # content = self.request.get("content")
+            # post.subject = subject
+            # post.content = content
+            # post.put()
+            self.redirect("/post/%d" % (int(post.key().id())))
+        else:
+            self.redirect("/login")
+
 class DeletePostPage(Handler):
     def get(self, blog_id):
         active_user = self.activeUser()
@@ -256,6 +290,7 @@ app = webapp2.WSGIApplication([
     ('/welcome', WelcomePage),
     ('/post/(\d+)', PostPage),
     ('/editpost/(\d+)', EditPostPage),
+    ('/editcomment/(\d+)', EditCommentPage),
     ('/deletepost/(\d+)', DeletePostPage),
 ], debug=True)
 
