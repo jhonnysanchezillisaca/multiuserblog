@@ -13,7 +13,12 @@
     {{error}}
   </div>
   <input type="submit">
-  <a href="/post/{{blog_id}}"><button type="button" name="cancel-btn">Cancel</button></a>
+  {% if post is none %}
+  <a href="/">
+  {% else %}
+  <a href="/post/{{blog_id}}">
+  {% endif %}
+  <button type="button" name="cancel-btn">Cancel</button></a>
 </form>
 
 {% endblock %}

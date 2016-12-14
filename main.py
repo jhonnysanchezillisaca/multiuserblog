@@ -106,7 +106,7 @@ class NewPostPage(Handler):
     def get(self):
         active_user = self.activeUser()
         if(active_user):
-            self.render("new_post.html")
+            self.render("new_post.html", post=None)
         else:
             self.redirect("/login")
 
@@ -135,7 +135,8 @@ class EditPostPage(Handler):
         active_user = self.activeUser()
         post = BlogPost.get_by_id(int(blog_id))
         if(active_user and post.creator == active_user):
-            self.render("new_post.html", post=post, blog_id=blog_id)
+            self.render("new_post.html", post=post, subject=post.subject,
+                        content=post.content, blog_id=blog_id)
         else:
             self.redirect("/login")
 
@@ -150,6 +151,27 @@ class EditPostPage(Handler):
             post.put()
             self.redirect("/post/%d" % (int(blog_id)))
         self.redirect("/login")
+
+
+class DeletePostPage(Handler):
+    def get(self, blog_id):
+        active_user = self.activeUser()
+        post = BlogPost.get_by_id(int(blog_id))
+        if(active_user and post.creator == active_user):
+            # renders the post
+            self.render("delete_post.html", post=post)
+        else:
+            self.redirect("/login")
+
+    def post(self, blog_id):
+        # TODO: delete comments of the post
+        active_user = self.activeUser()
+        post = BlogPost.get_by_id(int(blog_id))
+        if(active_user and post.creator == active_user):
+            post.delete()
+            self.redirect("/welcome")
+        else:
+            self.redirect("/login")
 
 
 class EditCommentPage(Handler):
@@ -199,18 +221,6 @@ class DeleteCommentPage(Handler):
         if(active_user and comment.creator == active_user):
             comment.delete()
             self.redirect("/post/%d" % (int(post.key().id())))
-        else:
-            self.redirect("/login")
-
-
-class DeletePostPage(Handler):
-    def get(self, blog_id):
-        # TODO: delete comments of the post
-        active_user = self.activeUser()
-        post = BlogPost.get_by_id(int(blog_id))
-        if(active_user and post.creator == active_user):
-            post.delete()
-            self.redirect("/welcome")
         else:
             self.redirect("/login")
 
