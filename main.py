@@ -143,14 +143,17 @@ class EditPostPage(Handler):
     def post(self, blog_id):
         active_user = self.activeUser()
         post = BlogPost.get_by_id(int(blog_id))
+
         if(active_user and post.creator == active_user):
             subject = self.request.get("subject")
             content = self.request.get("content")
-            post.subject = subject
-            post.content = content
-            post.put()
+            if(subject and content):
+                post.subject = subject
+                post.content = content
+                post.put()
             self.redirect("/post/%d" % (int(blog_id)))
-        self.redirect("/login")
+        else:
+            self.redirect("/login")
 
 
 class DeletePostPage(Handler):
@@ -164,10 +167,14 @@ class DeletePostPage(Handler):
             self.redirect("/login")
 
     def post(self, blog_id):
-        # TODO: delete comments of the post
         active_user = self.activeUser()
         post = BlogPost.get_by_id(int(blog_id))
         if(active_user and post.creator == active_user):
+            # Delete the comments of the post
+            q = Comment.gql("WHERE post = :post_ID", post_ID=blog_id)
+            for c in q:
+                c.delete()
+            # Delete the post
             post.delete()
             self.redirect("/welcome")
         else:
