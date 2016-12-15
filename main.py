@@ -4,6 +4,7 @@ import jinja2
 import re
 import hashlib
 import hmac
+import time
 
 from google.appengine.ext import db
 
@@ -33,6 +34,7 @@ class Handler(webapp2.RequestHandler):
         return active_user
 
 
+# TODO: Use correct types in the Model (foreign Keys)
 class BlogPost(db.Model):
     # post_ID = db.StringProperty(required=True)
     subject = db.StringProperty(required=True)
@@ -51,6 +53,12 @@ class User(db.Model):
 
 class Comment(db.Model):
     content = db.TextProperty(required=True)
+    creator = db.StringProperty(required=True)
+    created = db.DateTimeProperty(auto_now_add=True)
+    post = db.StringProperty(required=True)
+
+
+class Like(db.Model):
     creator = db.StringProperty(required=True)
     created = db.DateTimeProperty(auto_now_add=True)
     post = db.StringProperty(required=True)
@@ -77,29 +85,54 @@ class PostPage(Handler):
         q = Comment.all()
         post_comments = q.filter('post =', str(blog_id)).order('-created')
 
+        # Get the likes of the post
+        q = Like.gql("WHERE post = :post_id", post_id=blog_id, keys_only=True)
+        likes = len(q.fetch(None))
+
         # Check if the post belongs to the current user
         isUserPost = False
         if post.creator == username:
             isUserPost = True
 
-        self.render("post.html", posts=[post], comments=post_comments,
-                    isUserPost=isUserPost, blog_id=blog_id, username=username)
+        like_error = ""
+        if self.request.get("lerror"):
+            # TODO: send error messages correctly
+            like_error = "You can't like this post"
+        self.render("post.html", post=post, comments=post_comments,
+                    isUserPost=isUserPost, blog_id=blog_id,
+                    username=username, likes=likes, like_error=like_error)
 
     def post(self, blog_id):
         comment_error = ''
         username = self.activeUser()
+        post = BlogPost.get_by_id(int(blog_id))
+
         if(username):
             content = self.request.get("comment-content")
-            if content:
+            if(self.request.get("form_name") == "like"):
+                q = Like.gql("WHERE creator = :username and post = :post",
+                             username=username, post=blog_id)
+                if len(q.fetch(None)) > 0:
+                    self.redirect("/post/%d?lerror=True" % int(blog_id))
+                else:
+                    new_like = Like(creator=username, post=blog_id)
+                    new_like.put()
+                    time.sleep(0.1)
+                    self.redirect("/post/%d" % (int(blog_id)))
+
+            elif self.request.get("form_name") == "comment" and content:
                 new_comment = Comment(content=content,
                                       post=blog_id, creator=username)
                 new_comment.put()
+                # Sleep to give time to the DB to achieve consistency
+                time.sleep(0.1)
+                self.redirect("/post/%d" % (int(blog_id)))
+
             else:
                 self.redirect("/login")
         else:
             comment_error = "You need to be logged in to add comments"
-        # BUG: Bug, the comment is created, but don't shows up until refresh https://cloud.google.com/datastore/docs/articles/balancing-strong-and-eventual-consistency-with-google-cloud-datastore/ # NOQA
-        self.redirect("/post/%d" % (int(blog_id)))
+            self.redirect("/post/%d" % (int(blog_id)))
 
 
 class NewPostPage(Handler):
@@ -122,9 +155,11 @@ class NewPostPage(Handler):
             blog_post = BlogPost(subject=subject, content=content,
                                  creator=active_user)
             blog_post.put()
+            # Sleep to give time to the DB to achieve consistency
+            time.sleep(0.1)
             # Redirect to a page with the post
             self.redirect("/post/%d" % (blog_post.key().id()))
-        # If error stays in the new_post page and render the error messages
+        # If error, stays in the new_post page and render the error messages
         error = "We need a subject and the content!"
         self.render("new_post.html", subject=subject, content=content,
                     error=error)
@@ -151,6 +186,8 @@ class EditPostPage(Handler):
                 post.subject = subject
                 post.content = content
                 post.put()
+            # Sleep to give time to the DB to achieve consistency
+            time.sleep(0.1)
             self.redirect("/post/%d" % (int(blog_id)))
         else:
             self.redirect("/login")
@@ -170,12 +207,15 @@ class DeletePostPage(Handler):
         active_user = self.activeUser()
         post = BlogPost.get_by_id(int(blog_id))
         if(active_user and post.creator == active_user):
-            # Delete the comments of the post
+            # TODO: delete the likes of the post
+            # Deletes the comments of the post
             q = Comment.gql("WHERE post = :post_ID", post_ID=blog_id)
             for c in q:
                 c.delete()
             # Delete the post
             post.delete()
+            # Sleep to give time to the DB to achieve consistency
+            time.sleep(0.1)
             self.redirect("/welcome")
         else:
             self.redirect("/login")
@@ -203,6 +243,8 @@ class EditCommentPage(Handler):
             if new_content:
                 comment.content = new_content
                 comment.put()
+            # Sleep to give time to the DB to achieve consistency
+            time.sleep(0.1)
             self.redirect("/post/%d" % (int(post.key().id())))
         else:
             self.redirect("/login")
@@ -227,6 +269,8 @@ class DeleteCommentPage(Handler):
 
         if(active_user and comment.creator == active_user):
             comment.delete()
+            # Sleep to give time to the DB to achieve consistency
+            time.sleep(0.1)
             self.redirect("/post/%d" % (int(post.key().id())))
         else:
             self.redirect("/login")
