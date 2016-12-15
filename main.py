@@ -94,13 +94,15 @@ class PostPage(Handler):
         if post.creator == username:
             isUserPost = True
 
-        like_error = ""
-        if self.request.get("lerror"):
-            # TODO: send error messages correctly
-            like_error = "You can't like this post"
+        # Handles error messages
+        comment_error = self.request.get("c_err")
+        like_error = self.request.get("l_err")
+        error = self.request.get("err")
+
         self.render("post.html", post=post, comments=post_comments,
                     isUserPost=isUserPost, blog_id=blog_id,
-                    username=username, likes=likes, like_error=like_error)
+                    username=username, likes=likes, error=error,
+                    like_error=like_error, comment_error=comment_error)
 
     def post(self, blog_id):
         comment_error = ''
@@ -109,17 +111,23 @@ class PostPage(Handler):
 
         if(username):
             content = self.request.get("comment-content")
+            # Like form submited
             if(self.request.get("form_name") == "like"):
                 q = Like.gql("WHERE creator = :username and post = :post",
                              username=username, post=blog_id)
-                if len(q.fetch(None)) > 0:
-                    self.redirect("/post/%d?lerror=True" % int(blog_id))
+                # User can't like its own post
+                if username == post.creator:
+                    self.redirect("/post/%d?l_err=You can't like your own post" % int(blog_id))  # NOQA
+                # Can't like a post more than once
+                elif len(q.fetch(None)) > 0:
+                    self.redirect("/post/%d?l_err=You can't like this post again" % int(blog_id))  # NOQA
+                # Like created and stored
                 else:
                     new_like = Like(creator=username, post=blog_id)
                     new_like.put()
                     time.sleep(0.1)
                     self.redirect("/post/%d" % (int(blog_id)))
-
+            # Comment form submited
             elif self.request.get("form_name") == "comment" and content:
                 new_comment = Comment(content=content,
                                       post=blog_id, creator=username)
@@ -127,12 +135,11 @@ class PostPage(Handler):
                 # Sleep to give time to the DB to achieve consistency
                 time.sleep(0.1)
                 self.redirect("/post/%d" % (int(blog_id)))
-
             else:
-                self.redirect("/login")
+                self.redirect("/post/%d?c_err=Comment can't be empty" % (int(blog_id)))  # NOQA
+
         else:
-            comment_error = "You need to be logged in to add comments"
-            self.redirect("/post/%d" % (int(blog_id)))
+            self.redirect("/post/%d?err=You need to be logged in to perform that action" % int(blog_id))  # NOQA
 
 
 class NewPostPage(Handler):

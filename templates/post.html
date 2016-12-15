@@ -1,6 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<div class="error" style="color: red">
+    {{error}}
+</div>
+
 <div class="post">
     {% if isUserPost %}
         <a href="/editpost/{{blog_id}}"><button name="edit-btn">Edit post</button></a>
@@ -46,9 +51,6 @@
         <input type = "hidden" name = "form_name" value = "comment">
         <div class="comment_error" style="color: red">
             {{comment_error}}
-        </div>
-        <div class="likes">
-
         </div>
         <div class="comments">
                 <input type="text" name="comment-content" placeholder="Add a new comment">
