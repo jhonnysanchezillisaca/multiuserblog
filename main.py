@@ -86,8 +86,13 @@ class PostPage(Handler):
         post_comments = q.filter('post =', str(blog_id)).order('-created')
 
         # Get the likes of the post
-        q = Like.gql("WHERE post = :post_id", post_id=blog_id, keys_only=True)
-        likes = len(q.fetch(None))
+        q1 = Like.gql("WHERE post = :post_id", post_id=blog_id, keys_only=True)
+        likes = len(q1.fetch(None))
+
+        like = "Like"
+        for l in q1:
+            if l.creator == username:
+                like = "Unlike"
 
         # Check if the post belongs to the current user
         isUserPost = False
@@ -100,9 +105,9 @@ class PostPage(Handler):
         error = self.request.get("err")
 
         self.render("post.html", post=post, comments=post_comments,
-                    isUserPost=isUserPost, blog_id=blog_id,
-                    username=username, likes=likes, error=error,
-                    like_error=like_error, comment_error=comment_error)
+                    isUserPost=isUserPost, blog_id=blog_id, username=username,
+                    likes=likes, error=error, like_error=like_error,
+                    comment_error=comment_error, like=like)
 
     def post(self, blog_id):
         comment_error = ''
@@ -115,12 +120,16 @@ class PostPage(Handler):
             if(self.request.get("form_name") == "like"):
                 q = Like.gql("WHERE creator = :username and post = :post",
                              username=username, post=blog_id)
+                like = q.get()
                 # User can't like its own post
                 if username == post.creator:
                     self.redirect("/post/%d?l_err=You can't like your own post" % int(blog_id))  # NOQA
-                # Can't like a post more than once
+                # Unlike post
                 elif len(q.fetch(None)) > 0:
-                    self.redirect("/post/%d?l_err=You can't like this post again" % int(blog_id))  # NOQA
+                    like.delete()
+                    # Sleep to give time to the DB to achieve consistency
+                    time.sleep(0.1)
+                    self.redirect("/post/%d" % (int(blog_id)))
                 # Like created and stored
                 else:
                     new_like = Like(creator=username, post=blog_id)
@@ -214,7 +223,10 @@ class DeletePostPage(Handler):
         active_user = self.activeUser()
         post = BlogPost.get_by_id(int(blog_id))
         if(active_user and post.creator == active_user):
-            # TODO: delete the likes of the post
+            # Deletes the likes of the post
+            q = Like.gql("WHERE post = :post_ID", post_ID=blog_id)
+            for l in q:
+                l.delete()
             # Deletes the comments of the post
             q = Comment.gql("WHERE post = :post_ID", post_ID=blog_id)
             for c in q:
