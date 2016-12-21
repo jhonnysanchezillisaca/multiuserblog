@@ -8,8 +8,8 @@
 
 <div class="post">
     {% if isUserPost %}
-        <a href="/editpost/{{blog_id}}"><button name="edit-btn">Edit post</button></a>
-        <a href="/deletepost/{{blog_id}}"><button name="delete-btn">Delete post</button></a>
+        <a href="/editpost/{{blog_id}}"><button name="edit-btn" class="btn btn-default">Edit post</button></a>
+        <a href="/deletepost/{{blog_id}}"><button name="delete-btn" class="btn btn-danger">Delete post</button></a>
     {% endif %}
     <h2>{{post.subject}}</h2>
     <p>
@@ -26,7 +26,7 @@
             {{like_error}}
         </div>
         <div class="likes">
-            <input type="submit" name="like" value="{{like}} post">
+            <input type="submit" name="like" value="{{like}} post" class="btn btn-default">
             <span style="color: blue; font-size: 1.3em">
               {{likes}} likes
           </span>
@@ -37,7 +37,7 @@
     <h4>Comments:</h4>
     {% for comment in comments %}
         {% if comment.creator == username %}
-            <a href="/editcomment/{{comment.key().id()}}"><button type="button" name="edit-comment-btn">Edit comment</button></a>
+            <a href="/editcomment/{{comment.key().id()}}"><button type="button" name="edit-comment-btn" class="btn btn-default">Edit comment</button></a>
         {% endif %}
     <p>{{comment.content}}</p>
 
@@ -48,13 +48,17 @@
 
 
     <form method="post">
-        <input type = "hidden" name = "form_name" value = "comment">
-        <div class="comment_error" style="color: red">
-            {{comment_error}}
+        <div class="form-group">
+
+            <input type = "hidden" name = "form_name" value = "comment">
+            <div class="comment_error" style="color: red">
+                {{comment_error}}
+            </div>
         </div>
-        <div class="comments">
+
+        <div class="form-group comments">
                 <input type="text" name="comment-content" placeholder="Add a new comment">
-                <button type="submit" name="commment-btn">Comment</button>
+                <button type="submit" name="commment-btn" class="btn btn-primary">Comment</button>
         </div>
     </form>
 </div>

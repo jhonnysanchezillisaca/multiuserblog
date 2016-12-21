@@ -12,17 +12,20 @@
 </div>
 
 <form method="post">
-    <div class="comment_error" style="color: red">
+    <span class="comment_error" style="color: red">
         {{comment_error}}
-    </div>
-    <div class="comments">
+    </span>
+    <div class="form-groupcomments">
             <input type="text" name="comment-content" value="{{comment.content}}">
-            <button type="submit" name="commment-btn">Save</button>
+            <button type="submit" name="commment-btn" class="btn btn-primary">Save</button>
 
     </div>
-</form>
-<a href="/post/{{post.key().id()}}"><button>Cancel</button></a>
-<a href="/deletecomment/{{comment_id}}"><button>Delete</button></a>
 
+</form>
+
+<br>
+
+<a href="/post/{{post.key().id()}}"><button class="btn btn-default">Cancel</button></a>
+<a href="/deletecomment/{{comment_id}}"><button class="btn btn-danger">Delete</button></a>
 
 {% endblock %}

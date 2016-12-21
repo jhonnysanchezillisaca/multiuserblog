@@ -15,8 +15,8 @@
     <div class="confirmation-del" style="color: red; font-size: 2em">
         Are you sure you want to delete this post?
     </div>
-    <button type="submit" name="del-btn">Delete</button>
+    <button type="submit" name="del-btn" class="btn btn-danger">Delete</button>
 </form>
-<a href="/post/{{post.key().id()}}"><button>Cancel</button></a>
+<a href="/post/{{post.key().id()}}"><button class="btn btn-primary">Cancel</button></a>
 
 {% endblock %}

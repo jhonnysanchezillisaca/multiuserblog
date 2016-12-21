@@ -7,18 +7,18 @@
   <input type="text" name="subject" value="{{subject}}">
   <label for="content">Content:</label>
   <textarea name="content" value="">
-    {{content}}
+{{content}}
   </textarea>
   <div class="error" style="color:red">
     {{error}}
   </div>
-  <input type="submit">
+  <input type="submit" class="btn btn-primary">
   {% if post is none %}
   <a href="/">
   {% else %}
   <a href="/post/{{blog_id}}">
   {% endif %}
-  <button type="button" name="cancel-btn">Cancel</button></a>
+  <button type="button" name="cancel-btn" class="btn btn-danger">Cancel</button></a>
 </form>
 
 {% endblock %}

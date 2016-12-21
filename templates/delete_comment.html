@@ -17,9 +17,9 @@
     </div>
     <div class="comments">
             <p>{{comment.content}}</p>
-            <button type="submit" name="commment-btn">Delete</button>
+            <button type="submit" name="commment-btn" class="btn btn-danger">Delete</button>
     </div>
 </form>
-<a href="/post/{{post.key().id()}}"><button>Cancel</button></a>
+<a href="/post/{{post.key().id()}}"><button class="btn btn-primary">Cancel</button></a>
 
 {% endblock %}

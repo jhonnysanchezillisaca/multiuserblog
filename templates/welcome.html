@@ -2,24 +2,26 @@
 
 {% block content %}
 
-<h2>Welcome, {{username}}</h2>
+<h2 class="text-center">Welcome, {{username}}</h2>
 
-{% for post in posts %}
-<a href="/post/{{post.key().id()}}"><h2>{{post.subject}}</h2></a>
-<p>
-  {{post.content}}
-</p>
-<p style="color: grey;">
-  {{post.creator}}
-</p>
+<div class="posts">
+    {% for post in posts %}
+    <a href="/post/{{post.key().id()}}"><h2>{{post.subject}}</h2></a>
+    <p>
+      {{post.content}}
+    </p>
+    <p style="color: grey;">
+      {{post.creator}}
+    </p>
 {% endfor %}
+</div>
 
 <a href="/newpost">
-    <button type="button" name="btn-new-post">New Post</button>
+    <button type="button" name="btn-new-post" class="btn btn-primary">New Post</button>
 </a>
 
 <a href="/logout">
-    <button type="button" name="btn-logout">Log out</button>
+    <button type="button" name="btn-logout" class="btn btn-default">Log out</button>
 </a>
 
 {% endblock %}

@@ -89,6 +89,7 @@ class PostPage(Handler):
         q1 = Like.gql("WHERE post = :post_id", post_id=blog_id, keys_only=True)
         likes = len(q1.fetch(None))
 
+        # Establish text of button to 'Like' or 'Unlike' as needed
         like = "Like"
         for l in q1:
             if l.creator == username:
@@ -394,8 +395,8 @@ app = webapp2.WSGIApplication([
 ], debug=True)
 
 
-def set_cookie(self, name, val):
-    self.response.set_cookie(name, make_secure_val(val))
+# def set_cookie(self, name, val):
+#     self.response.set_cookie(name, make_secure_val(val))
 
 
 def username_exists(username):
