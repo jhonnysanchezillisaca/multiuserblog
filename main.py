@@ -1,3 +1,4 @@
+# TODO: change blog_id name for post_id
 import os
 import webapp2
 import jinja2
@@ -5,8 +6,7 @@ import re
 import hashlib
 import hmac
 import time
-
-from google.appengine.ext import db
+from model import BlogPost, User, Comment, Like
 
 SECRET = 'imsosecret'
 
@@ -26,6 +26,7 @@ class Handler(webapp2.RequestHandler):
     def render(self, template, **params):
         self.write(self.render_str(template, **params))
 
+    # Return the active user if it exists, else return None
     def activeUser(self):
         active_user = None
         if (self.request.cookies.get('username')):
@@ -34,71 +35,34 @@ class Handler(webapp2.RequestHandler):
         return active_user
 
 
-# TODO: Use correct types in the Model (foreign Keys)
-class BlogPost(db.Model):
-    # post_ID = db.StringProperty(required=True)
-    subject = db.StringProperty(required=True)
-    content = db.TextProperty(required=True)
-    creator = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    likes = db.IntegerProperty(required=False)
-
-
-class User(db.Model):
-    username = db.StringProperty(required=True)
-    h_password = db.StringProperty(required=True)
-    email = db.StringProperty(required=False)
-    created = db.DateTimeProperty(auto_now_add=True)
-
-
-class Comment(db.Model):
-    content = db.TextProperty(required=True)
-    creator = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    post = db.StringProperty(required=True)
-
-
-class Like(db.Model):
-    creator = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    post = db.StringProperty(required=True)
-
-
 class MainPage(Handler):
     def get(self):
         if(self.activeUser()):
             self.redirect("/welcome")
-
-        q = db.GqlQuery("select * from BlogPost order by created desc")
-        posts = q.fetch(10)
+        # Get posts
+        posts = BlogPost.getPosts(10)
         self.render("blog.html", posts=posts)
 
 
 class PostPage(Handler):
-    def get(self, blog_id):
+    def get(self, post_id):
         # Get the post to show
-        post = BlogPost.get_by_id(int(blog_id))
+        post = BlogPost.get_by_id(int(post_id))
+
         # Get current username
-        username = self.activeUser()
+        active_user = self.activeUser()
 
         # Get comments of the post
-        q = Comment.all()
-        post_comments = q.filter('post =', str(blog_id)).order('-created')
+        post_comments = Comment.getAllComments(post_id)
 
         # Get the likes of the post
-        q1 = Like.gql("WHERE post = :post_id", post_id=blog_id, keys_only=True)
-        likes = len(q1.fetch(None))
+        likes = Like.getLikes(post_id)
 
         # Establish text of button to 'Like' or 'Unlike' as needed
-        like = "Like"
-        for l in q1:
-            if l.creator == username:
-                like = "Unlike"
+        like = "Unlike" if Like.userLikedPost(active_user, post_id) else "Like"
 
         # Check if the post belongs to the current user
-        isUserPost = False
-        if post.creator == username:
-            isUserPost = True
+        isUserPost = True if post.creator == active_user else False
 
         # Handles error messages
         comment_error = self.request.get("c_err")
@@ -106,50 +70,41 @@ class PostPage(Handler):
         error = self.request.get("err")
 
         self.render("post.html", post=post, comments=post_comments,
-                    isUserPost=isUserPost, blog_id=blog_id, username=username,
-                    likes=likes, error=error, like_error=like_error,
-                    comment_error=comment_error, like=like)
+                    isUserPost=isUserPost, post_id=post_id,
+                    username=active_user, likes=likes, error=error,
+                    like_error=like_error, comment_error=comment_error,
+                    like=like)
 
-    def post(self, blog_id):
+    def post(self, post_id):
         comment_error = ''
-        username = self.activeUser()
-        post = BlogPost.get_by_id(int(blog_id))
+        active_user = self.activeUser()
+        post = BlogPost.get_by_id(int(post_id))
 
-        if(username):
+        if(active_user):
             content = self.request.get("comment-content")
             # Like form submited
             if(self.request.get("form_name") == "like"):
-                q = Like.gql("WHERE creator = :username and post = :post",
-                             username=username, post=blog_id)
-                like = q.get()
                 # User can't like its own post
-                if username == post.creator:
-                    self.redirect("/post/%d?l_err=You can't like your own post" % int(blog_id))  # NOQA
+                if active_user == post.creator:
+                    self.redirect("/post/%d?l_err=You can't like your own post" % int(post_id))  # NOQA
                 # Unlike post
-                elif len(q.fetch(None)) > 0:
-                    like.delete()
-                    # Sleep to give time to the DB to achieve consistency
-                    time.sleep(0.1)
-                    self.redirect("/post/%d" % (int(blog_id)))
+                elif Like.userLikedPost(active_user, post_id):
+                    Like.deleteLike(active_user, post_id)
+
+                    self.redirect("/post/%d" % (int(post_id)))
                 # Like created and stored
                 else:
-                    new_like = Like(creator=username, post=blog_id)
-                    new_like.put()
-                    time.sleep(0.1)
-                    self.redirect("/post/%d" % (int(blog_id)))
+                    Like.createLike(active_user, post_id)
+                    self.redirect("/post/%d" % (int(post_id)))
             # Comment form submited
             elif self.request.get("form_name") == "comment" and content:
-                new_comment = Comment(content=content,
-                                      post=blog_id, creator=username)
-                new_comment.put()
-                # Sleep to give time to the DB to achieve consistency
-                time.sleep(0.1)
-                self.redirect("/post/%d" % (int(blog_id)))
+                Comment.createComment(active_user, post_id, content)
+                self.redirect("/post/%d" % (int(post_id)))
             else:
-                self.redirect("/post/%d?c_err=Comment can't be empty" % (int(blog_id)))  # NOQA
+                self.redirect("/post/%d?c_err=Comment can't be empty" % (int(post_id)))  # NOQA
 
         else:
-            self.redirect("/post/%d?err=You need to be logged in to perform that action" % int(blog_id))  # NOQA
+            self.redirect("/post/%d?err=You need to be logged in to perform that action" % int(post_id))  # NOQA
 
 
 class NewPostPage(Handler):
@@ -169,13 +124,9 @@ class NewPostPage(Handler):
         content = self.request.get("content")
         # Save post to DB
         if(subject and content):
-            blog_post = BlogPost(subject=subject, content=content,
-                                 creator=active_user)
-            blog_post.put()
-            # Sleep to give time to the DB to achieve consistency
-            time.sleep(0.1)
+            post_id = BlogPost.createPost(active_user, subject, content)
             # Redirect to a page with the post
-            self.redirect("/post/%d" % (blog_post.key().id()))
+            self.redirect("/post/%d" % (post_id))
         # If error, stays in the new_post page and render the error messages
         error = "We need a subject and the content!"
         self.render("new_post.html", subject=subject, content=content,
@@ -183,59 +134,49 @@ class NewPostPage(Handler):
 
 
 class EditPostPage(Handler):
-    def get(self, blog_id):
+    def get(self, post_id):
         active_user = self.activeUser()
-        post = BlogPost.get_by_id(int(blog_id))
+        post = BlogPost.get_by_id(int(post_id))
         if(active_user and post.creator == active_user):
             self.render("new_post.html", post=post, subject=post.subject,
-                        content=post.content, blog_id=blog_id)
+                        content=post.content, post_id=post_id)
         else:
             self.redirect("/login")
 
-    def post(self, blog_id):
+    def post(self, post_id):
         active_user = self.activeUser()
-        post = BlogPost.get_by_id(int(blog_id))
+        post = BlogPost.get_by_id(int(post_id))
 
         if(active_user and post.creator == active_user):
             subject = self.request.get("subject")
             content = self.request.get("content")
             if(subject and content):
-                post.subject = subject
-                post.content = content
-                post.put()
-            # Sleep to give time to the DB to achieve consistency
-            time.sleep(0.1)
-            self.redirect("/post/%d" % (int(blog_id)))
+                post.editPost(subject, content)
+            self.redirect("/post/%d" % (int(post_id)))
         else:
             self.redirect("/login")
 
 
 class DeletePostPage(Handler):
-    def get(self, blog_id):
+    def get(self, post_id):
         active_user = self.activeUser()
-        post = BlogPost.get_by_id(int(blog_id))
+        post = BlogPost.get_by_id(int(post_id))
         if(active_user and post.creator == active_user):
             # renders the post
             self.render("delete_post.html", post=post)
         else:
             self.redirect("/login")
 
-    def post(self, blog_id):
+    def post(self, post_id):
         active_user = self.activeUser()
-        post = BlogPost.get_by_id(int(blog_id))
+        post = BlogPost.get_by_id(int(post_id))
         if(active_user and post.creator == active_user):
             # Deletes the likes of the post
-            q = Like.gql("WHERE post = :post_ID", post_ID=blog_id)
-            for l in q:
-                l.delete()
+            Like.deleteLikesFromPost(post_id)
             # Deletes the comments of the post
-            q = Comment.gql("WHERE post = :post_ID", post_ID=blog_id)
-            for c in q:
-                c.delete()
+            Comment.deleteCommentsFromPost(post_id)
             # Delete the post
-            post.delete()
-            # Sleep to give time to the DB to achieve consistency
-            time.sleep(0.1)
+            post.deletePost()
             self.redirect("/welcome")
         else:
             self.redirect("/login")
@@ -261,10 +202,7 @@ class EditCommentPage(Handler):
         if(active_user and comment.creator == active_user):
             new_content = self.request.get("comment-content")
             if new_content:
-                comment.content = new_content
-                comment.put()
-            # Sleep to give time to the DB to achieve consistency
-            time.sleep(0.1)
+                comment.editComment(new_content)
             self.redirect("/post/%d" % (int(post.key().id())))
         else:
             self.redirect("/login")
@@ -288,9 +226,7 @@ class DeleteCommentPage(Handler):
         post = BlogPost.get_by_id(int(comment.post))
 
         if(active_user and comment.creator == active_user):
-            comment.delete()
-            # Sleep to give time to the DB to achieve consistency
-            time.sleep(0.1)
+            comment.deleteComment()
             self.redirect("/post/%d" % (int(post.key().id())))
         else:
             self.redirect("/login")
@@ -301,7 +237,8 @@ class SignupPage(Handler):
         active_user = self.activeUser()
         if(active_user):
             self.redirect("/welcome")
-        self.render("sign_up.html")
+        else:
+            self.render("sign_up.html")
 
     def post(self):
         username = self.request.get("username")
@@ -315,17 +252,16 @@ class SignupPage(Handler):
         email_error = ""
         # Check if the data is valid and store in the DB
         if (all_valid(username, password, verify, email) and
-                not username_exists(username)):
-            new_user = User(username=username,
+                not User.username_exists(username)):
+            User.createUser(username=username,
                             h_password=hash_password(password),
                             email=email)
-            new_user.put()
             # Set a cookie with the username value secured
             self.response.set_cookie('username', make_secure_val(username))
             self.redirect("/welcome")
         # Render the errors if any
         else:
-            if username_exists(username):
+            if User.username_exists(username):
                 username_error = "Username already exists"
             if not valid_username(username):
                 username_error = "That's not a valid username."
@@ -346,10 +282,7 @@ class WelcomePage(Handler):
     def get(self):
         username = self.activeUser()
         if username:
-            q = db.GqlQuery("select * from BlogPost order by created desc")
-            posts = q.fetch(10)
-            for p in posts:
-                print p.key().id()
+            posts = BlogPost.getPosts(10)
             self.render("welcome.html", username=username, posts=posts)
         else:
             self.redirect("login")
@@ -367,11 +300,12 @@ class LoginPage(Handler):
         password = self.request.get("password")
         login_error = ''
 
-        if valid_login(username, password):
+        if User.valid_login(username, hash_password(password)):
             self.response.set_cookie('username', make_secure_val(username))
             self.redirect('welcome')
-        login_error = "Invalid login"
-        self.render("login.html", login_error=login_error)
+        else:
+            login_error = "Invalid login"
+            self.render("login.html", login_error=login_error)
 
 
 class LogoutPage(Handler):
@@ -393,28 +327,6 @@ app = webapp2.WSGIApplication([
     ('/deletecomment/(\d+)', DeleteCommentPage),
     ('/deletepost/(\d+)', DeletePostPage),
 ], debug=True)
-
-
-# def set_cookie(self, name, val):
-#     self.response.set_cookie(name, make_secure_val(val))
-
-
-def username_exists(username):
-    q = User.all()
-    q.filter('username =', username)
-    if q.get():
-        return True
-    return False
-
-
-def valid_login(username, password):
-    if username_exists(username):
-        q = User.all()
-        q.filter('username =', username)
-        result = q.get()
-        if result.h_password == hash_password(password):
-            return True
-    return False
 
 
 # Check sign up

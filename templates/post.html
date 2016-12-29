@@ -8,8 +8,8 @@
 
 <div class="post">
     {% if isUserPost %}
-        <a href="/editpost/{{blog_id}}"><button name="edit-btn" class="btn btn-default">Edit post</button></a>
-        <a href="/deletepost/{{blog_id}}"><button name="delete-btn" class="btn btn-danger">Delete post</button></a>
+        <a href="/editpost/{{post_id}}"><button name="edit-btn" class="btn btn-default">Edit post</button></a>
+        <a href="/deletepost/{{post_id}}"><button name="delete-btn" class="btn btn-danger">Delete post</button></a>
     {% endif %}
     <h2>{{post.subject}}</h2>
     <p>
