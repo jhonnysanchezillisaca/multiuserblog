@@ -1,4 +1,3 @@
-# TODO: change blog_id name for post_id
 import os
 import webapp2
 import jinja2
@@ -203,7 +202,7 @@ class EditCommentPage(Handler):
             new_content = self.request.get("comment-content")
             if new_content:
                 comment.editComment(new_content)
-            self.redirect("/post/%d" % (int(post.key().id())))
+            self.redirect("/post/%d" % (int(post.key.id())))
         else:
             self.redirect("/login")
 
@@ -227,7 +226,7 @@ class DeleteCommentPage(Handler):
 
         if(active_user and comment.creator == active_user):
             comment.deleteComment()
-            self.redirect("/post/%d" % (int(post.key().id())))
+            self.redirect("/post/%d" % (int(post.key.id())))
         else:
             self.redirect("/login")
 

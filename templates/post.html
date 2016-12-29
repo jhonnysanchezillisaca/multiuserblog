@@ -37,7 +37,7 @@
     <h4>Comments:</h4>
     {% for comment in comments %}
         {% if comment.creator == username %}
-            <a href="/editcomment/{{comment.key().id()}}"><button type="button" name="edit-comment-btn" class="btn btn-default">Edit comment</button></a>
+            <a href="/editcomment/{{comment.key.id()}}"><button type="button" name="edit-comment-btn" class="btn btn-default">Edit comment</button></a>
         {% endif %}
     <p>{{comment.content}}</p>
 

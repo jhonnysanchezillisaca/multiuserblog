@@ -3,7 +3,7 @@
 {% block content %}
 
     {% for post in posts %}
-    <a href="/post/{{post.key().id()}}"><h2>{{post.subject}}</h2></a>
+    <a href="/post/{{post.key.id()}}"><h2>{{post.subject}}</h2></a>
     <p>
       {{post.content}}
     </p>

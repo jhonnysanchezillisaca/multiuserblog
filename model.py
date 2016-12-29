@@ -1,16 +1,17 @@
+from google.appengine.ext import ndb
 from google.appengine.ext import db
 import time
 
 
 # TODO: document create methods returns id
 # TODO: Use correct types in the Model (foreign Keys)
-class BlogPost(db.Model):
+class BlogPost(ndb.Model):
     # post_ID = db.StringProperty(required=True)
-    subject = db.StringProperty(required=True)
-    content = db.TextProperty(required=True)
-    creator = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    likes = db.IntegerProperty(required=False)
+    subject = ndb.StringProperty(required=True)
+    content = ndb.TextProperty(required=True)
+    creator = ndb.StringProperty(required=True)
+    created = ndb.DateTimeProperty(auto_now_add=True)
+    likes = ndb.IntegerProperty(required=False)
 
     def editPost(self, subject, content):
         self.subject = subject
@@ -20,32 +21,34 @@ class BlogPost(db.Model):
         time.sleep(0.1)
 
     def deletePost(self):
-        self.delete()
+        self.key.delete()
         time.sleep(0.1)
 
-    @staticmethod
-    def getPosts(numPosts):
-        q = db.GqlQuery("select * from BlogPost order by created desc")
+    @classmethod
+    def getPosts(cls, numPosts):
+        # q = ndb.gql("select * from BlogPost order by created desc")
+        # return q.fetch(numPosts)
+        q = cls.query().order(-BlogPost.created)
         return q.fetch(numPosts)
 
-    @staticmethod
-    def createPost(creator, subject, content):
+    @classmethod
+    def createPost(cls, creator, subject, content):
         blog_post = BlogPost(subject=subject, content=content,
                              creator=creator)
         blog_post.put()
         # Sleep to give time to the DB to achieve consistency
         time.sleep(0.1)
-        return blog_post.key().id()
+        return blog_post.key.id()
 
 
-class User(db.Model):
-    username = db.StringProperty(required=True)
-    h_password = db.StringProperty(required=True)
-    email = db.StringProperty(required=False)
-    created = db.DateTimeProperty(auto_now_add=True)
+class User(ndb.Model):
+    username = ndb.StringProperty(required=True)
+    h_password = ndb.StringProperty(required=True)
+    email = ndb.StringProperty(required=False)
+    created = ndb.DateTimeProperty(auto_now_add=True)
 
-    @staticmethod
-    def createUser(username, h_password, email):
+    @classmethod
+    def createUser(cls, username, h_password, email):
         new_user = User(username=username,
                         h_password=h_password,
                         email=email)
@@ -53,30 +56,28 @@ class User(db.Model):
         # Sleep to give time to the DB to achieve consistency
         time.sleep(0.1)
 
-    @staticmethod
-    def username_exists(username):
-        q = User.all()
-        q.filter('username =', username)
+    @classmethod
+    def username_exists(cls, username):
+        q = cls.query(cls.username == username)
         if q.get():
             return True
         return False
 
-    @staticmethod
-    def valid_login(username, h_password):
-        if User.username_exists(username):
-            q = User.all()
-            q.filter('username =', username)
+    @classmethod
+    def valid_login(cls, username, h_password):
+        if cls.username_exists(username):
+            q = cls.query(cls.username == username)
             result = q.get()
             if result.h_password == h_password:
                 return True
         return False
 
 
-class Comment(db.Model):
-    content = db.TextProperty(required=True)
-    creator = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    post = db.StringProperty(required=True)
+class Comment(ndb.Model):
+    content = ndb.TextProperty(required=True)
+    creator = ndb.StringProperty(required=True)
+    created = ndb.DateTimeProperty(auto_now_add=True)
+    post = ndb.StringProperty(required=True)
 
     def editComment(self, content):
         self.content = content
@@ -84,68 +85,74 @@ class Comment(db.Model):
         time.sleep(0.1)
 
     def deleteComment(self):
-        self.delete()
+        self.key.delete()
+        time.sleep(0.1)
 
-    @staticmethod
-    def getAllComments(blog_id):
+    @classmethod
+    def getAllComments(cls, post_id):
         # Get comments of the post
-        q = Comment.all()
-        return q.filter('post =', str(blog_id)).order('-created')
+        q = cls.query()
+        return q.filter(cls.post == str(post_id)).order(-cls.created)
 
-    @staticmethod
-    def createComment(creator, post, content):
+    @classmethod
+    def createComment(cls, creator, post, content):
         new_comment = Comment(content=content,
                               post=post, creator=creator)
         new_comment.put()
         # Sleep to give time to the DB to achieve consistency
         time.sleep(0.1)
-        return new_comment.key().id()
+        return new_comment.key.id()
 
-    @staticmethod
-    def deleteCommentsFromPost(post_id):
+    @classmethod
+    def deleteCommentsFromPost(cls, post_id):
         # Deletes the comments of the post
-        q = Comment.gql("WHERE post = :post_id", post_id=post_id)
+        q = cls.query(cls.post == post_id)
+        # q = Comment.gql("WHERE post = :post_id", post_id=post_id)
         for c in q:
-            c.delete()
+            c.key.delete()
 
 
-class Like(db.Model):
-    creator = db.StringProperty(required=True)
-    created = db.DateTimeProperty(auto_now_add=True)
-    post = db.StringProperty(required=True)
+class Like(ndb.Model):
+    creator = ndb.StringProperty(required=True)
+    created = ndb.DateTimeProperty(auto_now_add=True)
+    post = ndb.StringProperty(required=True)
 
-    @staticmethod
-    def getLikes(blog_id):
-        q = Like.gql("WHERE post = :post_id", post_id=blog_id, keys_only=True)
+    @classmethod
+    def getLikes(cls, post_id):
+        q = cls.query(cls.post == post_id)
+        # q = cls.gql("WHERE post = :post_id", post_id=post_id, keys_only=True)
         return len(q.fetch(None))
 
-    @staticmethod
-    def userLikedPost(username, blog_id):
-        q = Like.gql("WHERE post = :post_id and creator = :creator",
-                     post_id=blog_id, creator=username, keys_only=True)
+    @classmethod
+    def userLikedPost(cls, username, post_id):
+        q = cls.query(cls.post == post_id, cls.creator == username)
+        # q = Like.gql("WHERE post = :post_id and creator = :creator",
+        #              post_id=post_id, creator=username, keys_only=True)
         if(len(q.fetch(None)) > 0):
             return True
         return False
 
-    @staticmethod
-    def deleteLike(creator, post):
-        q = Like.gql("WHERE creator = :creator and post = :post",
-                     creator=creator, post=post)
-        q.get().delete()
+    @classmethod
+    def deleteLike(cls, creator, post_id):
+        q = cls.query(cls.creator == creator, cls.post == post_id)
+        # q = Like.gql("WHERE creator = :creator and post = :post",
+        #              creator=creator, post=post)
+        q.get().key.delete()
         # Sleep to give time to the DB to achieve consistency
         time.sleep(0.1)
 
-    @staticmethod
-    def createLike(creator, post):
+    @classmethod
+    def createLike(cls, creator, post):
         new_like = Like(creator=creator, post=post)
         new_like.put()
         # Sleep to give time to the DB to achieve consistency
         time.sleep(0.1)
-        return new_like.key().id()
+        return new_like.key.id()
 
-    @staticmethod
-    def deleteLikesFromPost(post_id):
+    @classmethod
+    def deleteLikesFromPost(cls, post_id):
         # Deletes the likes of the post
-        q = Like.gql("WHERE post = :post_id", post_id=post_id)
+        q = cls.query(cls.post == post_id)
+        # q = Like.gql("WHERE post = :post_id", post_id=post_id)
         for l in q:
-            l.delete()
+            l.key.delete()
