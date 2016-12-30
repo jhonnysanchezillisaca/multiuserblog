@@ -91,7 +91,7 @@ class Comment(ndb.Model):
     def getAllComments(cls, post_id):
         # Get comments of the post
         q = cls.query()
-        return q.filter(cls.post == str(post_id)).order(-cls.created)
+        return q.filter(cls.post == str(post_id)).order(cls.created)
 
     @classmethod
     def createComment(cls, creator, post, content):

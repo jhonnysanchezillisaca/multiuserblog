@@ -14,4 +14,9 @@ indexes:
   properties:
   - name: post
   - name: created
+
+- kind: Comment
+  properties:
+  - name: post
+  - name: created
     direction: desc
