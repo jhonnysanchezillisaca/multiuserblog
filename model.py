@@ -4,7 +4,6 @@ import time
 
 
 # TODO: document create methods returns id
-# TODO: Use correct types in the Model (foreign Keys)
 class BlogPost(ndb.Model):
     # post_ID = db.StringProperty(required=True)
     subject = ndb.StringProperty(required=True)

@@ -19,7 +19,6 @@
       {{post.creator}}
     </p>
 
-
     <form method="post">
         <input type = "hidden" name = "form_name" value = "like">
         <div class="like_error" style="color: red">
@@ -33,6 +32,7 @@
         </div>
     </form>
 </div>
+
 <div class="comments">
     <h4>Comments:</h4>
     {% for comment in comments %}
@@ -46,10 +46,8 @@
     </p>
     {% endfor %}
 
-
     <form method="post">
         <div class="form-group">
-
             <input type = "hidden" name = "form_name" value = "comment">
             <div class="comment_error" style="color: red">
                 {{comment_error}}

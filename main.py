@@ -4,7 +4,6 @@ import jinja2
 import re
 import hashlib
 import hmac
-import time
 from model import BlogPost, User, Comment, Like
 
 SECRET = 'imsosecret'
@@ -38,7 +37,7 @@ class MainPage(Handler):
     def get(self):
         if(self.activeUser()):
             self.redirect("/welcome")
-        # Get posts
+        # Get posts order by creation date
         posts = BlogPost.getPosts(10)
         self.render("blog.html", posts=posts)
 
@@ -89,13 +88,12 @@ class PostPage(Handler):
                 # Unlike post
                 elif Like.userLikedPost(active_user, post_id):
                     Like.deleteLike(active_user, post_id)
-
                     self.redirect("/post/%d" % (int(post_id)))
                 # Like created and stored
                 else:
                     Like.createLike(active_user, post_id)
                     self.redirect("/post/%d" % (int(post_id)))
-            # Comment form submited
+            # Comment form submited and content is not empty
             elif self.request.get("form_name") == "comment" and content:
                 Comment.createComment(active_user, post_id, content)
                 self.redirect("/post/%d" % (int(post_id)))
@@ -103,7 +101,8 @@ class PostPage(Handler):
                 self.redirect("/post/%d?c_err=Comment can't be empty" % (int(post_id)))  # NOQA
 
         else:
-            self.redirect("/post/%d?err=You need to be logged in to perform that action" % int(post_id))  # NOQA
+            login_error = "You must be logged in to perform that action"
+            self.render("login.html", login_error=login_error)
 
 
 class NewPostPage(Handler):
