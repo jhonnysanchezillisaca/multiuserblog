@@ -354,9 +354,7 @@ def valid_email(email):
 
 
 def valid_verify(password, verify):
-    if password == verify:
-        return True
-    return False
+    return True if password == verify else return False
 
 
 # Utils password
@@ -375,6 +373,4 @@ def hash_password(s):
 # Returns the hash of the password if the hash with the secret is correct
 def check_secure_val(h):
     (s, h) = h.split(',')
-    if(hash_str(s) == h):
-        return s
-    return None
+    return s if(hash_str(s) == h) else return None
