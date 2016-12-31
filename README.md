@@ -1,6 +1,6 @@
 # Blog!
 
-Blog! is a blogging website where users can create, edit, comment and like posts. To get to the public view of my site just visit http://starry-odyssey-763.appspot.com/welcome
+Blog! is a blogging website where users can create, edit, comment and like posts. To get to the public view of the site just visit http://starry-odyssey-763.appspot.com/welcome
 
 
 ## Dependencies
