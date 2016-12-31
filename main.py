@@ -36,7 +36,7 @@ class Handler(webapp2.RequestHandler):
 class MainPage(Handler):
     def get(self):
         if(self.activeUser()):
-            self.redirect("/welcome")
+            return self.redirect("/welcome")
         # Get posts order by creation date
         posts = BlogPost.getPosts(10)
         self.render("blog.html", posts=posts)
@@ -46,7 +46,9 @@ class PostPage(Handler):
     def get(self, post_id):
         # Get the post to show
         post = BlogPost.get_by_id(int(post_id))
-
+        # If the post didn't exists returns to the main page
+        if not post:
+            return self.redirect("/")
         # Get current username
         active_user = self.activeUser()
 
@@ -84,21 +86,22 @@ class PostPage(Handler):
             if(self.request.get("form_name") == "like"):
                 # User can't like its own post
                 if active_user == post.creator:
-                    self.redirect("/post/%d?l_err=You can't like your own post" % int(post_id))  # NOQA
+                    return self.redirect("/post/%d?l_err=You can't like your own post" % int(post_id))  # NOQA
                 # Unlike post
                 elif Like.userLikedPost(active_user, post_id):
                     Like.deleteLike(active_user, post_id)
-                    self.redirect("/post/%d" % (int(post_id)))
+                    return self.redirect("/post/%d" % (int(post_id)))
                 # Like created and stored
                 else:
                     Like.createLike(active_user, post_id)
-                    self.redirect("/post/%d" % (int(post_id)))
+                    return self.redirect("/post/%d" % (int(post_id)))
             # Comment form submited and content is not empty
             elif self.request.get("form_name") == "comment" and content:
                 Comment.createComment(active_user, post_id, content)
-                self.redirect("/post/%d" % (int(post_id)))
+                return self.redirect("/post/%d" % (int(post_id)))
             else:
-                self.redirect("/post/%d?c_err=Comment can't be empty" % (int(post_id)))  # NOQA
+                return self.redirect("/post/%d?c_err=Comment can't be empty"
+                                     % (int(post_id)))
 
         else:
             login_error = "You must be logged in to perform that action"
@@ -109,22 +112,22 @@ class NewPostPage(Handler):
     def get(self):
         active_user = self.activeUser()
         if(active_user):
-            self.render("new_post.html", post=None)
+            return self.render("new_post.html", post=None)
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
     def post(self):
         active_user = self.activeUser()
-        # If the user cookie is not valid redirect to main page
+        # If the user cookie is not valid redirect to the login page
         if(not active_user):
-            self.redirect("/")
+            return self.redirect("/login")
         subject = self.request.get("subject")
         content = self.request.get("content")
         # Save post to DB
         if(subject and content):
             post_id = BlogPost.createPost(active_user, subject, content)
             # Redirect to a page with the post
-            self.redirect("/post/%d" % (post_id))
+            return self.redirect("/post/%d" % (post_id))
         # If error, stays in the new_post page and render the error messages
         error = "We need a subject and the content!"
         self.render("new_post.html", subject=subject, content=content,
@@ -139,7 +142,7 @@ class EditPostPage(Handler):
             self.render("new_post.html", post=post, subject=post.subject,
                         content=post.content, post_id=post_id)
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
     def post(self, post_id):
         active_user = self.activeUser()
@@ -150,9 +153,9 @@ class EditPostPage(Handler):
             content = self.request.get("content")
             if(subject and content):
                 post.editPost(subject, content)
-            self.redirect("/post/%d" % (int(post_id)))
+            return self.redirect("/post/%d" % (int(post_id)))
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
 
 class DeletePostPage(Handler):
@@ -163,7 +166,7 @@ class DeletePostPage(Handler):
             # renders the post
             self.render("delete_post.html", post=post)
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
     def post(self, post_id):
         active_user = self.activeUser()
@@ -175,9 +178,9 @@ class DeletePostPage(Handler):
             Comment.deleteCommentsFromPost(post_id)
             # Delete the post
             post.deletePost()
-            self.redirect("/welcome")
+            return self.redirect("/welcome")
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
 
 class EditCommentPage(Handler):
@@ -190,7 +193,7 @@ class EditCommentPage(Handler):
             self.render("edit_comment.html", comment=comment,
                         post=post, comment_id=comment_id)
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
     def post(self, comment_id):
         active_user = self.activeUser()
@@ -201,9 +204,9 @@ class EditCommentPage(Handler):
             new_content = self.request.get("comment-content")
             if new_content:
                 comment.editComment(new_content)
-            self.redirect("/post/%d" % (int(post.key.id())))
+            return self.redirect("/post/%d" % (int(post.key.id())))
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
 
 class DeleteCommentPage(Handler):
@@ -216,7 +219,7 @@ class DeleteCommentPage(Handler):
             self.render("delete_comment.html", comment=comment,
                         post=post, comment_id=comment_id)
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
     def post(self, comment_id):
         active_user = self.activeUser()
@@ -225,16 +228,16 @@ class DeleteCommentPage(Handler):
 
         if(active_user and comment.creator == active_user):
             comment.deleteComment()
-            self.redirect("/post/%d" % (int(post.key.id())))
+            return self.redirect("/post/%d" % (int(post.key.id())))
         else:
-            self.redirect("/login")
+            return self.redirect("/login")
 
 
 class SignupPage(Handler):
     def get(self):
         active_user = self.activeUser()
         if(active_user):
-            self.redirect("/welcome")
+            return self.redirect("/welcome")
         else:
             self.render("sign_up.html")
 
@@ -256,7 +259,7 @@ class SignupPage(Handler):
                             email=email)
             # Set a cookie with the username value secured
             self.response.set_cookie('username', make_secure_val(username))
-            self.redirect("/welcome")
+            return self.redirect("/welcome")
         # Render the errors if any
         else:
             if User.username_exists(username):
@@ -283,14 +286,14 @@ class WelcomePage(Handler):
             posts = BlogPost.getPosts(10)
             self.render("welcome.html", username=username, posts=posts)
         else:
-            self.redirect("login")
+            return self.redirect("login")
 
 
 class LoginPage(Handler):
     def get(self):
         active_user = self.activeUser()
         if(active_user):
-            self.redirect("/welcome")
+            return self.redirect("/welcome")
         self.render("login.html")
 
     def post(self):
@@ -300,7 +303,7 @@ class LoginPage(Handler):
 
         if User.valid_login(username, hash_password(password)):
             self.response.set_cookie('username', make_secure_val(username))
-            self.redirect('welcome')
+            return self.redirect('welcome')
         else:
             login_error = "Invalid login"
             self.render("login.html", login_error=login_error)
@@ -309,7 +312,7 @@ class LoginPage(Handler):
 class LogoutPage(Handler):
     def get(self):
         self.response.delete_cookie('username')
-        self.redirect("/")
+        return self.redirect("/")
 
 
 app = webapp2.WSGIApplication([
